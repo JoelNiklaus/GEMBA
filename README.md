@@ -2,7 +2,7 @@
 
 ## Setup
 
-Install required packages with python >= 3.8 
+Install required packages with python >= 3.8 (tested with 3.12.7)
 
 ```
 pip install -r requirements.txt
@@ -23,9 +23,26 @@ export OPENAI_API_KEY=
 
 ## Scoring with GEMBA
 
-It assumes two files with the same number of lines. It prints the score for each line pair:
+Install the gemba package with `pip install gemba` and use the following code:
+
+```python
+from gemba import get_gemba_scores
+
+source = ["Hello, how are you?", "I am fine, thank you.", "I am not fine, thank you."]
+hypothesis = ["Hallo, wie geht es dir?", "Ich bin gut, danke.", "Ich bin Adolf, wer bist du?"]
+source_lang = "en"
+target_lang = "de"
+
+answers, errors = get_gemba_scores(source, hypothesis, source_lang, target_lang, method="GEMBA-MQM_norm", model="gpt-4o")
+
+for answer, error in zip(answers, errors):
+    print(answer, error)
 
 ```
+
+Alternatively, you can run the main file on two text files. It assumes two files with the same number of lines. It prints the score for each line pair:
+
+```bash
 python main.py --source=source.txt --hypothesis=hypothesis.txt --source_lang=English --target_lang=Czech --method="GEMBA-MQM" --model="gpt-4"
 ```
 

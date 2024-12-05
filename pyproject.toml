@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gemba"
+version = "0.1.0"
+description = "GEMBA — GPT Estimation Metric Based Assessment"
+readme = "README.md"
+authors = [
+    { name = "Joel Niklaus", email = "joel@niklaus.ai" },
+]
+license = "MIT"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "openai>=1.0.0",
+    "pandas",
+    "termcolor",
+    "pexpect",
+    "scipy",
+    "ipdb",
+    "absl-py",
+    "diskcache",
+]
+
+[project.urls]
+Homepage = "https://github.com/joelniklaus/gemba" 
