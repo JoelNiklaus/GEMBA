@@ -54,9 +54,9 @@ def get_gemba_scores(source, hypothesis, source_lang, target_lang, method="GEMBA
     cache = dc.Cache(f'{cache_dir}/{model}_{method}', expire=None, size_limit=int(10e10), cull_limit=0, eviction_policy='none')
     gptapi = GptApi()
 
-    if method == "GEMBA-MQM":
+    if method in ["GEMBA-MQM", "GEMBA-MQM_norm"]:
         df["prompt"] = df.apply(lambda x: apply_template(TEMPLATE_GEMBA_MQM, x), axis=1)
-        parse_answer = lambda x: parse_mqm_answer(x, list_mqm_errors=False, full_desc=True)
+        parse_answer = lambda x: parse_mqm_answer(x, list_mqm_errors=True, full_desc=True, normalize=method == "GEMBA-MQM_norm")
         answers = gptapi.bulk_request(df, model, parse_answer, cache=cache, max_tokens=500)
     elif method in ["GEMBA-DA", "GEMBA-DA_ref", "GEMBA-SQM", "GEMBA-SQM_ref", "GEMBA-stars", "GEMBA-stars_ref", "GEMBA-classes", "GEMBA-classes_ref"]:
         df["prompt"] = df.apply(lambda x: apply_template(prompts[method]['prompt'], x), axis=1)
@@ -73,5 +73,6 @@ def get_gemba_scores(source, hypothesis, source_lang, target_lang, method="GEMBA
         answers = gptapi.bulk_request(df, model, parse_answer, cache=cache)
     else:
         raise Exception(f"Method {method} not supported.")
-
-    return list(pd.DataFrame(answers)['answer'])
+    
+    df = pd.DataFrame(answers)
+    return df['answer'].tolist(), df['errors'].tolist()

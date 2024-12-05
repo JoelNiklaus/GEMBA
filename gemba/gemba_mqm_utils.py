@@ -79,7 +79,7 @@ def parse_error_class(error):
     return class_name
 
 
-def parse_mqm_answer(x, list_mqm_errors=False, full_desc=True):
+def parse_mqm_answer(x, list_mqm_errors=False, full_desc=True, normalize=True):
     if x is None:
         return None
 
@@ -130,7 +130,7 @@ def parse_mqm_answer(x, list_mqm_errors=False, full_desc=True):
         if error_level not in errors:
                 continue
         for error in errors[error_level]:
-            if error_counter < 5 and not list_mqm_errors:
+            if error_counter < 5:
                 final_score += 25 if error_level == 'critical' else 5 if error_level == 'major' else 1
                 error_counter += 1
 
@@ -142,11 +142,12 @@ def parse_mqm_answer(x, list_mqm_errors=False, full_desc=True):
     if final_score > 25:
         final_score = 25
 
+    # negative score is to normalize that higher score is better
+    return_score = (-final_score * 4 + 100) if normalize else -final_score
     if list_mqm_errors:
-        return error_classes
+        return return_score, error_classes
     else:
-        # negative score is to normalize that higher score is better
-        return -final_score
+        return return_score
 
 
 def mqm_fewshot(few_shots):

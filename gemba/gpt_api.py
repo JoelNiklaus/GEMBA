@@ -60,6 +60,10 @@ class GptApi:
             full_answer = full_answer["answer"]
             answer_id += 1
             answer = parse_response(full_answer)
+            if isinstance(answer, tuple):
+                answer, errors = answer
+            else:
+                errors = None
             if self.verbose or temperature > 0:
                 print(f"Answer (t={temperature}): " + colored(answer, "yellow") + " (" + colored(full_answer, "blue") + ")", file=sys.stderr)
             if answer is None:
@@ -69,6 +73,7 @@ class GptApi:
                     "temperature": temperature,
                     "answer_id": answer_id,
                     "answer": answer,
+                    "errors": errors,
                     "prompt": prompt,
                     "finish_reason": finish_reason,
                     "model": model,
