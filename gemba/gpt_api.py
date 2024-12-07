@@ -89,6 +89,12 @@ class GptApi:
     def request_api(self, prompt, model, temperature=0, max_tokens=None):
         if temperature > 10:
             return []
+            
+        # Add maximum token limit
+        MAX_TOKENS_LIMIT = 4000  # Adjust this based on your model's context window
+        if max_tokens and max_tokens > MAX_TOKENS_LIMIT:
+            print(f"Reached maximum token limit of {MAX_TOKENS_LIMIT}", file=sys.stderr)
+            return []
 
         while True:
             try:
@@ -123,8 +129,12 @@ class GptApi:
                     print(colored(f"Increasing max tokens to fit answers.", "red") + colored(answer, "blue"), file=sys.stderr)
                 print(f"Finish reason: {choice.finish_reason}", file=sys.stderr)
                 if max_tokens is None:
+                    max_tokens = 500  # Set initial max_tokens if None
+                new_max_tokens = max_tokens + 200
+                if new_max_tokens > MAX_TOKENS_LIMIT:
+                    print(f"Would exceed maximum token limit of {MAX_TOKENS_LIMIT}", file=sys.stderr)
                     return []
-                return self.request_api(prompt, model, temperature=temperature, max_tokens=max_tokens + 200)
+                return self.request_api(prompt, model, temperature=temperature, max_tokens=new_max_tokens)
 
             answers.append({
                 "answer": answer,

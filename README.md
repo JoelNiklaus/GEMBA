@@ -29,7 +29,7 @@ Install the gemba package with `pip install gemba` and use the following code:
 from gemba import get_gemba_scores
 
 source = ["Hello, how are you?", "I am fine, thank you.", "I am not fine, thank you."]
-hypothesis = ["Hallo, wie geht es dir?", "Ich bin gut, danke.", "Ich bin Adolf, wer bist du?"]
+hypothesis = ["Hallo, wie geht es dir?", "Ich bin gut, danke.", "Ich bin Joel, wer bist du?"]
 source_lang = "en"
 target_lang = "de"
 
