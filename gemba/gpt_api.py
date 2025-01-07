@@ -1,12 +1,11 @@
 import os
 import sys
 import time
-import ipdb
 import logging
 from termcolor import colored
-from datetime import datetime
 import openai
 import tqdm
+from concurrent.futures import ThreadPoolExecutor
 
 
 # class for calling OpenAI API and handling cache
@@ -177,8 +176,13 @@ class GptApi:
     
     def bulk_request(self, df, model, parse_mqm_answer, cache, max_tokens=None):
         answers = []
-        for i, row in tqdm.tqdm(df.iterrows(), total=len(df), file=sys.stderr):
-            prompt = row["prompt"]
-            parsed_answers = self.request(prompt, model, parse_mqm_answer, cache=cache, max_tokens=max_tokens)
-            answers += parsed_answers
+        with ThreadPoolExecutor(100) as executor:
+            futures = [
+                executor.submit(self.request, row["prompt"], model, parse_mqm_answer, cache=cache, max_tokens=max_tokens)
+                for _, row in df.iterrows()
+            ]
+            
+            for future in tqdm.tqdm(futures, total=len(df), file=sys.stderr):
+                answers += future.result()
+                
         return answers
