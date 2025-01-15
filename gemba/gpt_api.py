@@ -6,6 +6,8 @@ from termcolor import colored
 import openai
 import tqdm
 from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict
+
 
 
 # class for calling OpenAI API and handling cache
@@ -57,6 +59,22 @@ class GptApi:
         for full_answer in answers:
             finish_reason = full_answer["finish_reason"]
             full_answer = full_answer["answer"]
+
+            if finish_reason != "stop":
+                print(f"No valid answer, giving score 0")
+                errors = defaultdict(list)
+                errors["critical"].append("Judge errored, giving answer score 0.")
+                parsed_answers.append({
+                    "temperature": temperature,
+                    "answer_id": answer_id,
+                    "answer": 0,
+                    "errors": errors,
+                    "prompt": prompt,
+                    "finish_reason": finish_reason,
+                    "model": model,
+                })
+                continue
+
             answer_id += 1
             answer = parse_response(full_answer)
             if isinstance(answer, tuple):
@@ -67,33 +85,32 @@ class GptApi:
                 print(f"Answer (t={temperature}): " + colored(answer, "yellow") + " (" + colored(full_answer, "blue") + ")", file=sys.stderr)
             if answer is None:
                 continue
-            parsed_answers.append(
-                {
-                    "temperature": temperature,
-                    "answer_id": answer_id,
-                    "answer": answer,
-                    "errors": errors,
-                    "prompt": prompt,
-                    "finish_reason": finish_reason,
-                    "model": model,
-                }
-            )
+            parsed_answers.append({
+                "temperature": temperature,
+                "answer_id": answer_id,
+                "answer": answer,
+                "errors": errors,
+                "prompt": prompt,
+                "finish_reason": finish_reason,
+                "model": model,
+            })
 
         # there was no valid answer, increase temperature and try again
         if len(parsed_answers) == 0:
+            print(f"No valid answer, increasing temperature to {temperature + 1} and trying again")
             return self.request(prompt, model, parse_response, temperature=temperature + 1, answer_id=answer_id, cache=cache)
 
         return parsed_answers
 
     def request_api(self, prompt, model, temperature=0, max_tokens=None):
         if temperature > 10:
-            return []
+            return [{"answer": None, "finish_reason": "error"}]
             
         # Add maximum token limit
         MAX_TOKENS_LIMIT = 4000  # Adjust this based on your model's context window
         if max_tokens and max_tokens > MAX_TOKENS_LIMIT:
             print(f"Reached maximum token limit of {MAX_TOKENS_LIMIT}", file=sys.stderr)
-            return []
+            return [{"answer": None, "finish_reason": "length"}]
 
         while True:
             try:
@@ -103,10 +120,10 @@ class GptApi:
                 # response was filtered
                 if hasattr(e, 'code'):
                     if e.code == 'content_filter':
-                        return []
+                        return [{"answer": None, "finish_reason": "filter"}]
                     print(e.code, file=sys.stderr)
                 if hasattr(e, 'error') and e.error['code'] == 'invalid_model_output':
-                    return []
+                    return [{"answer": None, "finish_reason": "invalid"}]
 
                 # frequent error is reaching the API limit
                 print(colored("Error, retrying...", "red"), file=sys.stderr)
@@ -116,7 +133,7 @@ class GptApi:
         answers = []
         for choice in response.choices:
             if choice.message.content is None:
-                return []
+                return [{"answer": None, "finish_reason": "invalid"}]
             if hasattr(choice, "message"):
                 answer = choice.message.content.strip()
             else:
@@ -126,13 +143,13 @@ class GptApi:
             if choice.finish_reason != "stop":
                 if self.verbose:
                     print(colored(f"Increasing max tokens to fit answers.", "red") + colored(answer, "blue"), file=sys.stderr)
-                print(f"Finish reason: {choice.finish_reason}", file=sys.stderr)
                 if max_tokens is None:
                     max_tokens = 500  # Set initial max_tokens if None
-                new_max_tokens = max_tokens + 200
+                new_max_tokens = max_tokens * 2
+                print(f"Finish reason: {choice.finish_reason}, increasing max tokens to {new_max_tokens}", file=sys.stderr)
                 if new_max_tokens > MAX_TOKENS_LIMIT:
                     print(f"Would exceed maximum token limit of {MAX_TOKENS_LIMIT}", file=sys.stderr)
-                    return []
+                    return [{"answer": None, "finish_reason": choice.finish_reason}]
                 return self.request_api(prompt, model, temperature=temperature, max_tokens=new_max_tokens)
 
             answers.append({
